@@ -1,0 +1,39 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-cloud
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloud-resources
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: cloud-resources
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: cloud-resources
+      annotations:
+        build: https://github.com/appvia/resources
+    spec:
+      serviceAccount: cloud-resources
+      containers:
+      - name: controller
+        image: quay.io/gambol99/cloud-resources:latest
+        imagePullPolicy: Always
+        args:
+        - --cloud-provider=null
+        - --election-namespace=kube-resources
+        - --enable-metrics=true
+        - --name=resource.appvia.io
+        - --resync-duration=0s
+        - --threadness=1
+        - --verbose=true
+        env: []
+
