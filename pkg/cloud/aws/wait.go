@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/gambol99/resources/pkg/models"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -44,15 +45,24 @@ func (p *provider) Wait(ctx context.Context, name string, options *models.WaitOp
 	}
 
 	// @step: wait for check interval or signal to end
+	started := time.Now()
 	for {
 		select {
 		case <-ctx.Done():
 			return models.StatusUnknown, models.ErrOperationAborted
 		case <-ticker.C:
+
 			status, err := p.Status(ctx, name, nil)
 			if err != nil {
 				return models.StatusUnknown, err
 			}
+
+			log.WithFields(log.Fields{
+				"since":     time.Since(started).String(),
+				"stackname": name,
+				"status":    status,
+			}).Debug("checking the status stack")
+
 			if status == models.StatusInProgress {
 				continue
 			}

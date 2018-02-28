@@ -41,6 +41,10 @@ func (p *provider) List(ctx context.Context, options *models.ListOptions) ([]*mo
 	metric.ObserveDuration()
 
 	for _, x := range resp.StackSummaries {
+		// @check if the stack has already been deleted
+		if aws.StringValue(x.StackStatus) == "DELETE_COMPLETE" {
+			continue
+		}
 		stack, content, err := p.getStack(ctx, aws.StringValue(x.StackName))
 		if err != nil {
 			return list, err

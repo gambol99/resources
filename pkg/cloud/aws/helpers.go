@@ -29,6 +29,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/prometheus/client_golang/prometheus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gambol99/resources/pkg/models"
 	"github.com/gambol99/resources/pkg/utils"
@@ -40,8 +41,18 @@ func (p *provider) getStack(ctx context.Context, name string) (*cloudformation.S
 		requestDuration.WithLabelValues("get").Observe(v)
 	}))
 
-	resp, err := p.client.DescribeStacksWithContext(ctx, &cloudformation.DescribeStacksInput{StackName: aws.String(name)})
+	log.WithFields(log.Fields{
+		"stackname": name,
+	}).Debug("retrieving cloudformation stack")
+
+	resp, err := p.client.DescribeStacksWithContext(ctx, &cloudformation.DescribeStacksInput{
+		StackName: aws.String(name),
+	})
 	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return nil, "", models.ErrStackNotFound
+		}
+
 		return nil, "", err
 	}
 
@@ -107,28 +118,28 @@ func (p *provider) isOwned(stack *cloudformation.Stack) bool {
 // getAccessToken is responsible for generating an access token for the user
 func (p *provider) getAccessToken(ctx context.Context, username string) (string, string, error) {
 	// @step: get the user has not gone over the limit
-	if resp, err := p.accounts.ListAccessKeysWithContext(ctx, &iam.ListAccessKeysInput{
-		UserName: aws.String(username),
-	}); err != nil {
-		return "", "", err
-	} else {
-		// @check if we have reached the max number of keys
-		if len(resp.AccessKeyMetadata) >= maxAccessKeys {
-			return "", "", fmt.Errorf("user: %s has reached max number of access keys", username)
-		}
-	}
-
-	resp, err := p.accounts.CreateAccessKeyWithContext(ctx, &iam.CreateAccessKeyInput{
+	resp, err := p.accounts.ListAccessKeysWithContext(ctx, &iam.ListAccessKeysInput{
 		UserName: aws.String(username),
 	})
 	if err != nil {
 		return "", "", err
 	}
-	if resp.AccessKey == nil {
+	// @check if we have reached the max number of keys
+	if len(resp.AccessKeyMetadata) >= maxAccessKeys {
+		return "", "", fmt.Errorf("user: %s has reached max number of access keys", username)
+	}
+
+	res, err := p.accounts.CreateAccessKeyWithContext(ctx, &iam.CreateAccessKeyInput{
+		UserName: aws.String(username),
+	})
+	if err != nil {
+		return "", "", err
+	}
+	if res.AccessKey == nil {
 		return "", "", fmt.Errorf("no access returns in response for user: %s", username)
 	}
 
-	return aws.StringValue(resp.AccessKey.AccessKeyId), aws.StringValue(resp.AccessKey.SecretAccessKey), nil
+	return aws.StringValue(res.AccessKey.AccessKeyId), aws.StringValue(res.AccessKey.SecretAccessKey), nil
 }
 
 // getPolicyArn is responsible for resoling a policy name to aws ARN

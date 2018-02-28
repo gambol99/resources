@@ -80,11 +80,11 @@ func (c *controller) deleted(name, namespace string) error {
 	// @logic to need to update tags for set a maintenance deletion
 	expiration := time.Now().Add(stack.Spec.Retention)
 	log.WithFields(log.Fields{
-		"expiry":    expiration.Format(time.RFC822Z),
+		"expiry":    time.Now().Add(stack.Spec.Retention).String(),
 		"name":      name,
 		"namespace": namespace,
 		"template":  stack.Spec.Template,
-	}).Info("attempting to mark stack later deletion")
+	}).Info("attempting to mark stack deletion later")
 
 	stack.Spec.Tags[models.DeletionTimeTag] = fmt.Sprintf("%d", expiration.Unix())
 

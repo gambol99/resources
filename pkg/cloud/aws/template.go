@@ -60,7 +60,7 @@ func (t *Templater) Render(c context.Context, values map[string]string, content 
 	capture := prometheus.NewTimer(templateDuration)
 	defer capture.ObserveDuration()
 
-	if err = tm.ExecuteTemplate(writer, "name", values); err != nil {
+	if err = tm.ExecuteTemplate(writer, "main", values); err != nil {
 		return "", err
 	}
 
@@ -78,13 +78,6 @@ func NewTemplater(client ec2iface.EC2API, config *models.ProviderConfig) *Templa
 // Region returns the region we are in
 func (t *Templater) Region() string {
 	return t.config.Region
-}
-
-// Filter is responsible for filtering on objects
-func (t *Templater) Filter(items []models.Object) []models.Object {
-	var selected []models.Object
-
-	return selected
 }
 
 // Subnets returns a list of subnets within the VPC
@@ -152,7 +145,6 @@ func (t *Templater) templateFuncsMap(tm *template.Template) template.FuncMap {
 	funcs["region"] = t.Region
 	funcs["vpc"] = t.Network
 	funcs["vpcid"] = t.NetworkID
-	funcs["filter"] = t.Filter
 	funcs["subnets"] = t.Subnets
 
 	return funcs

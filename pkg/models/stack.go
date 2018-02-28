@@ -45,5 +45,5 @@ func (s *Stack) RequiresDeletion() bool {
 
 // ExpiresIn returns the stack expiration
 func (s *Stack) ExpiresIn() string {
-	return time.Now().Sub(s.Spec.DeleteOn).String()
+	return s.Spec.DeleteOn.Sub(time.Now()).String()
 }

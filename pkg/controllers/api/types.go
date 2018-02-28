@@ -33,12 +33,12 @@ type Config struct {
 	CloudProvider string
 	// ClusterName is the name of the cluster
 	ClusterName string
-	// ControllerName is the name of the this controller
-	ControllerName string
 	// EnableMetrics enables the metrics endpoint
 	EnableMetrics bool
 	// ElectionNamespace is the namespace for the endpoint election
 	ElectionNamespace string
+	// KubeConfig is an optional path to a kubeconfig file
+	KubeConfig string
 	// MetricsListen is the interface we should expose the metrics on
 	MetricsListen string
 	// Name is the name of the controller

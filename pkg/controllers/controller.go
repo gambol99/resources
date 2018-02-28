@@ -30,6 +30,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/record"
 
 	apiv1 "github.com/gambol99/resources/pkg/apis/resources/v1"
@@ -75,7 +76,7 @@ func (r *ResourceController) Run(ctx context.Context) error {
 		log.Infof("initializing the cloud provider: %s", r.config.CloudProvider)
 		if r.cloud, err = makeCloudProvider(r.config.CloudProvider, &models.ProviderConfig{
 			ClusterName: r.config.ClusterName,
-			Name:        r.config.ControllerName,
+			Name:        r.config.Name,
 		}); err != nil {
 			return fmt.Errorf("unable to initialize cloud provider: %s", err)
 		}
@@ -167,7 +168,7 @@ func (r *ResourceController) Run(ctx context.Context) error {
 
 // Wait waits on the controllers to finish
 func (r *ResourceController) Wait(timeout time.Duration) error {
-	var doneCh chan struct{}
+	doneCh := make(chan struct{}, 0)
 
 	go func() {
 		for _, x := range r.routines {
@@ -207,9 +208,18 @@ func makeMetricsEndpoint(config *api.Config) error {
 	return nil
 }
 
+// makeKubernetesConfig is responsible for getting either the in-cluster config of kubeconfig
+func makeKubernetesConfig(config *api.Config) (*rest.Config, error) {
+	if config.KubeConfig != "" {
+		return clientcmd.BuildConfigFromFlags("", config.KubeConfig)
+	}
+
+	return rest.InClusterConfig()
+}
+
 // makeResourceKubernetesClient returns a versioned kubernetes api client
 func makeResourceKubernetesClient(config *api.Config) (versioned.Interface, error) {
-	cfg, err := rest.InClusterConfig()
+	cfg, err := makeKubernetesConfig(config)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +229,7 @@ func makeResourceKubernetesClient(config *api.Config) (versioned.Interface, erro
 
 // makeKubernetesClient is responsible for initializing a kubernetes api clients
 func makeKubernetesClient(config *api.Config) (kubernetes.Interface, error) {
-	cfg, err := rest.InClusterConfig()
+	cfg, err := makeKubernetesConfig(config)
 	if err != nil {
 		return nil, err
 	}

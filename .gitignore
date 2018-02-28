@@ -6,6 +6,7 @@ vendor/
 release/
 cover.html
 cover.out
+aws.env
 *.orig
 debug
 TODO

@@ -22,6 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/prometheus/client_golang/prometheus"
+	log "github.com/sirupsen/logrus"
 )
 
 // UpdateTags is responsible for updating just the tags of a stack
@@ -32,9 +33,15 @@ func (p *provider) UpdateTags(ctx context.Context, name string, tags map[string]
 	}))
 	defer metric.ObserveDuration()
 
+	log.WithFields(log.Fields{
+		"stackname": name,
+		"tags":      tags,
+	}).Debug("updating the cloudformation tags")
+
 	_, err := p.client.UpdateStackWithContext(ctx, &cloudformation.UpdateStackInput{
-		StackName: aws.String(name),
-		Tags:      makeStackTags(tags),
+		StackName:           aws.String(name),
+		Tags:                makeStackTags(tags),
+		UsePreviousTemplate: aws.Bool(true),
 	})
 
 	return err

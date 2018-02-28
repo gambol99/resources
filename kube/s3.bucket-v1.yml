@@ -4,13 +4,16 @@ kind: CloudTemplate
 metadata:
   name: s3.bucket.v1
 spec:
-  retention: 360h
+  retention: 1m
   parameters:
   - name: bucket
   format: yaml
   content: |
     AWSTemplateFormatVersion: '2010-09-09'
     Description: S3 bucket stack in
+    Outputs:
+      Bucket:
+        Value: {{ .bucket }}
     Resources:
       Bucket:
         Type: AWS::S3::Bucket

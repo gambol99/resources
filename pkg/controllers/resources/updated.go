@@ -59,10 +59,10 @@ func (c *controller) updated(resource *apiv1.CloudResource) error {
 	// @step: update the status of the status of the resource
 	if err := c.updateCloudStatus(ctx, stack, result, resource); err != nil {
 		log.WithFields(log.Fields{
-			"error":     result.Error(),
+			"error":     err.Error(),
 			"resource":  resource.Name,
 			"namespace": resource.Namespace,
-		}).Error("failed to update / create the cloud resource")
+		}).Error("failed to update the cloud status")
 
 		return fmt.Errorf("failed to update the cloud status for stack: (%s/%s)", resource.Namespace, resource.Name)
 	}
@@ -92,7 +92,7 @@ func (c *controller) updated(resource *apiv1.CloudResource) error {
 
 // updateCloudStatus is responsible for updating the cloud resource status
 func (c *controller) updateCloudStatus(ctx context.Context, stack *models.Stack, errMsg error, resource *apiv1.CloudResource) error {
-	status := apiv1.CloudStatus{
+	status := &apiv1.CloudStatus{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      resource.Name,
 			Namespace: resource.Namespace,
@@ -109,6 +109,7 @@ func (c *controller) updateCloudStatus(ctx context.Context, stack *models.Stack,
 		}
 		status.Status = fmt.Sprintf("%s", stack.Status)
 	}
+	status.Status = fmt.Sprintf("%s", stack.Status)
 
 	// @step: grab the logs from the stack
 	logs, err := c.options.Cloud.Logs(ctx, stack.Name, &models.GetOptions{})
@@ -129,10 +130,11 @@ func (c *controller) updateCloudResource(ctx context.Context, stackname string, 
 		return nil, fmt.Errorf("unable to check if stack exists already: %s", err)
 	}
 	checksum := getResourceChecksum(resource)
-	status := stack.Status.Status
+	log.Debugf("calculated checksum for stack as: %s", checksum)
 
 	// @check if the resource has changed and if not we can return
 	if found {
+		status := stack.Status.Status
 		// if the stack is found, check the status of the stack and if not finished we need to
 	RETRY:
 		switch status {
@@ -166,6 +168,10 @@ func (c *controller) updateCloudResource(ctx context.Context, stackname string, 
 			return stack, nil
 		}
 	}
+	log.WithFields(log.Fields{
+		"namespace": resource.Namespace,
+		"resource":  resource.Name,
+	}).Debug("checking the resource and template is valid")
 
 	// @step: validate the cloud resource is ok
 	if errs := resource.IsValid(); len(errs) > 0 {
@@ -183,6 +189,14 @@ func (c *controller) updateCloudResource(ctx context.Context, stackname string, 
 		return stack, err
 	}
 
+	log.WithFields(log.Fields{
+		"model":     model,
+		"namespace": resource.Namespace,
+		"resource":  resource.Name,
+		"stackname": stackname,
+		"template":  template.Name,
+	}).Info("attempting to create the stack")
+
 	// @step: attempt to create the resource
 	err = c.options.Cloud.Create(ctx, stackname, &models.CreateOptions{
 		Context:  model,
@@ -192,7 +206,8 @@ func (c *controller) updateCloudResource(ctx context.Context, stackname string, 
 			models.CreatedTag:      fmt.Sprintf("%d", time.Now().Unix()),
 			models.NamespaceTag:    resource.Namespace,
 			models.ProviderNameTag: c.config.Name,
-			models.ResourceNameTag: fmt.Sprintf("%d", resource.Spec.Retention.Duration),
+			models.ResourceNameTag: resource.Name,
+			models.RetentionTag:    fmt.Sprintf("%d", resource.Spec.Retention.Duration),
 			models.TemplateNameTag: resource.Spec.TemplateName,
 		},
 		Template: template,
@@ -201,8 +216,27 @@ func (c *controller) updateCloudResource(ctx context.Context, stackname string, 
 		return stack, err
 	}
 
+	log.WithFields(log.Fields{
+		"namespace": resource.Namespace,
+		"resource":  resource.Name,
+		"stackname": stackname,
+	}).Info("successfully created the stack, waiting for the stack to complete")
+
 	// @step: attempt to wait for the stack to finish
-	status, err = c.options.Cloud.Wait(ctx, stackname, nil)
+	status, err := c.options.Cloud.Wait(ctx, stackname, nil)
+	if err != nil {
+		return stack, err
+	}
+
+	log.WithFields(log.Fields{
+		"namespace": resource.Namespace,
+		"resource":  resource.Name,
+		"stackname": stackname,
+		"status":    status,
+	}).Info("successfully wait on the stack completion")
+
+	// @step: get the stacks
+	stack, err = c.options.Cloud.Get(ctx, stackname, &models.GetOptions{})
 	if err != nil {
 		return stack, err
 	}

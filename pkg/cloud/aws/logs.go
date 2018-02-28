@@ -23,6 +23,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/prometheus/client_golang/prometheus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gambol99/resources/pkg/models"
 )
@@ -37,16 +39,29 @@ func (p *provider) Logs(ctx context.Context, name string, options *models.GetOpt
 		return "", models.ErrStackNotFound
 	}
 
+	log.WithFields(log.Fields{
+		"stackname": name,
+	}).Debug("retrieving the cloudformation logs for stack")
+
+	tm := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+		requestDuration.WithLabelValues("logs").Observe(v)
+	}))
 	resp, err := p.client.DescribeStackEventsWithContext(ctx, &cloudformation.DescribeStackEventsInput{
 		StackName: aws.String(name),
 	})
 	if err != nil {
 		return "", err
 	}
+	tm.ObserveDuration()
 
 	var b bytes.Buffer
+	b.WriteString("\n")
 	for _, x := range resp.StackEvents {
-		b.WriteString(fmt.Sprintf("%s\n", x.ResourceStatusReason))
+		b.WriteString(fmt.Sprintf("%s %s %s %s\n",
+			aws.StringValue(x.ResourceStatus),
+			aws.StringValue(x.ResourceType),
+			aws.StringValue(x.LogicalResourceId),
+			aws.StringValue(x.ResourceStatusReason)))
 	}
 
 	return b.String(), nil

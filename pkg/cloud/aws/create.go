@@ -45,7 +45,6 @@ func (p *provider) Create(ctx context.Context, name string, options *models.Crea
 	if err != nil {
 		return err
 	}
-
 	// @step: attempt to validate the stack before sending it, we don't want to waste time
 	if _, err = p.client.ValidateTemplateWithContext(ctx, &cloudformation.ValidateTemplateInput{
 		TemplateBody: aws.String(generated),
@@ -72,12 +71,11 @@ func (p *provider) Create(ctx context.Context, name string, options *models.Crea
 	if !found {
 		// we are creating a new stack
 		if _, err := p.client.CreateStack(&cloudformation.CreateStackInput{
-			Capabilities:                aws.StringSlice([]string{"CAPABILITY_IAM"}),
-			DisableRollback:             aws.Bool(isTrue),
-			EnableTerminationProtection: aws.Bool(isTrue),
-			StackName:                   aws.String(name),
-			Tags:                        makeStackTags(options.Tags),
-			TemplateBody:                aws.String(generated),
+			Capabilities:    aws.StringSlice([]string{"CAPABILITY_IAM"}),
+			DisableRollback: aws.Bool(isTrue),
+			StackName:       aws.String(name),
+			Tags:            makeStackTags(options.Tags),
+			TemplateBody:    aws.String(generated),
 		}); err != nil {
 			return err
 		}

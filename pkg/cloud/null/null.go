@@ -108,6 +108,9 @@ func (p *provider) Delete(ctx context.Context, name string, options *models.Dele
 func (p *provider) Exists(ctx context.Context, name string) (*models.Stack, bool, error) {
 	stack, err := p.getStack(ctx, name)
 	if err != nil {
+		if err == models.ErrStackNotFound {
+			return nil, false, nil
+		}
 		return nil, false, err
 	}
 

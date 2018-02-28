@@ -18,6 +18,7 @@ package resources
 
 import (
 	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"reflect"
@@ -100,10 +101,10 @@ func getResourceChecksum(resource *apiv1.CloudResource) string {
 		}
 	}
 
-	return string(h.Sum(nil))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // getStackName is the default naming convertion for all formation stacks
 func getStackName(name, namespace string) string {
-	return fmt.Sprintf("stacks_%s_%s", namespace, name)
+	return fmt.Sprintf("stacks-%s-%s", namespace, name)
 }

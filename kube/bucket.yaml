@@ -7,4 +7,11 @@ spec:
   templateName: s3.bucket.v1
   parameters:
   - name: bucket
-    value: cloud-resources-test
+    value: cloud-resources-rohith
+  secrets:
+  - name: test
+    values:
+    - type: output
+      key: bucket_name
+      value: Bucket
+

@@ -40,6 +40,17 @@ func main() {
 	app.Compiled = version.GetBuildTime()
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
+			Name:   "cloud",
+			Usage:  "the cloud provider implemetation, i.e. aws, gce etc `NAME`",
+			EnvVar: "CLOUD_PROVIDER",
+			Value:  "aws",
+		},
+		cli.StringFlag{
+			Name:   "cluster",
+			Usage:  "the name of the kubernetes cluster we are provisioning for `NAME`",
+			EnvVar: "CLUSTER_NAME",
+		},
+		cli.StringFlag{
 			Name:   "name",
 			Usage:  "the name for this controller, used when creating the stacks `NAME`",
 			EnvVar: "PROVIDER_NAME",
@@ -49,12 +60,6 @@ func main() {
 			Name:   "enable-metrics",
 			Usage:  "indicated you wish to enable the metrics endpoint `BOOL`",
 			EnvVar: "ENABLE_METRICS",
-		},
-		cli.StringFlag{
-			Name:   "cloud-provider",
-			Usage:  "the cloud provider implemetation, i.e. aws, gce etc `NAME`",
-			EnvVar: "CLOUD_PROVIDER",
-			Value:  "aws",
 		},
 		cli.DurationFlag{
 			Name:   "resync-duration",
@@ -67,6 +72,11 @@ func main() {
 			Usage:  "the default timeout for a stack tom complete or error `DURATION`",
 			EnvVar: "STACK_TIMEOUT",
 			Value:  time.Minute * 30,
+		},
+		cli.StringFlag{
+			Name:   "kubeconfig",
+			Usage:  "An optional path to a kubernetes client configuration `PATH`",
+			EnvVar: "KUBE_CONFIG",
 		},
 		cli.StringFlag{
 			Name:   "election-namespace",
@@ -93,12 +103,13 @@ func main() {
 		},
 	}
 	app.Action = func(cx *cli.Context) error {
-		// @step: create the controller
 		return func() error {
 			c, err := controllers.New(&api.Config{
-				CloudProvider:     cx.String("cloud-provider"),
-				EnableMetrics:     cx.Bool("enable-metrics"),
+				CloudProvider:     cx.String("cloud"),
+				ClusterName:       cx.String("cluster"),
 				ElectionNamespace: cx.String("election-namespace"),
+				EnableMetrics:     cx.Bool("enable-metrics"),
+				KubeConfig:        os.ExpandEnv(cx.String("kubeconfig")),
 				MetricsListen:     cx.String("metrics-listen"),
 				Name:              cx.String("name"),
 				ResyncDuration:    cx.Duration("resync-duration"),
@@ -115,7 +126,7 @@ func main() {
 			defer cancel()
 			go func() {
 				if err := c.Run(ctx); err != nil {
-					fmt.Fprintf(os.Stderr, "failed to start controller: %s", err)
+					fmt.Fprintf(os.Stderr, "failed to start controller: %s\n", err)
 					os.Exit(1)
 				}
 			}()
@@ -123,6 +134,7 @@ func main() {
 			signalChannel := make(chan os.Signal)
 			signal.Notify(signalChannel, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 			<-signalChannel
+			cancel()
 
 			// @step: wait for the resource controller to gracefully shutdown
 			return c.Wait(time.Duration(10 * time.Minute))

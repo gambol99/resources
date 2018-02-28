@@ -31,6 +31,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gambol99/resources/pkg/models"
 	"github.com/gambol99/resources/pkg/utils"
@@ -56,11 +57,18 @@ const (
 // New creates and returns a aws provider
 func New(config *models.ProviderConfig) (models.CloudProvider, error) {
 	if config.Region == "" {
+		log.Debug("no aws region has been specified, using the metadata service or environment variables")
 		config.Region = findRegion()
 	}
 	// @check we have a region
 	if config.Region == "" {
 		return nil, errors.New("you must specifiy the aws region, no metedata service available")
+	}
+	if config.ClusterName == "" {
+		return nil, errors.New("you have not set the clustername")
+	}
+	if config.Name == "" {
+		return nil, errors.New("you have not set the provider name")
 	}
 
 	sess, err := session.NewSession(&aws.Config{
@@ -86,6 +94,7 @@ func findRegion() string {
 	// @step: check the environment variable
 	for _, x := range []string{"AWS_REGION", "AWS_DEFAULT_REGION"} {
 		if region = os.Getenv(x); region != "" {
+			log.Debugf("using the aws region: %s", region)
 			return region
 		}
 	}

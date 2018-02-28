@@ -118,7 +118,7 @@ func (c *controller) Run(ctx context.Context) error {
 	defer c.queue.ShutDown()
 
 	// @step: start the shared index informer
-	var stopCh chan struct{}
+	stopCh := make(chan struct{}, 0)
 	go c.informer.Run(stopCh)
 
 	log.WithFields(log.Fields{"controller": c.Name()}).Info("waiting for controller caches to synchronize")
@@ -132,10 +132,12 @@ func (c *controller) Run(ctx context.Context) error {
 		go c.processItems()
 	}
 	// @step: wait for a signal to stop
-	<-ctx.Done()
+	select {
+	case <-ctx.Done():
+		close(stopCh)
+	}
 	// @step: shutdown the queue and the informer
 	log.WithFields(log.Fields{"controller": c.Name()}).Info("shutting down the controller")
-	close(stopCh)
 
 	return nil
 }
@@ -174,8 +176,6 @@ func (c *controller) processNextItem() bool {
 // processEvent is where the action happend the method is responsible for conversion what is
 // desired (defined by changes in the custom resources) with the actual backend
 func (c *controller) processEvent(key string) error {
-	fmt.Printf("processEvent() key = %s\n", key)
-
 	if leader := c.options.IsLeader(); !leader {
 		log.WithFields(log.Fields{
 			"controller": c.Name(),

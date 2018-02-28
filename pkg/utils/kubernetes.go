@@ -29,16 +29,16 @@ import (
 )
 
 // UpdateCloudStatus is responsible for updating a cloud status
-func UpdateCloudStatus(client versioned.Interface, status apiv1.CloudStatus) error {
+func UpdateCloudStatus(client versioned.Interface, status *apiv1.CloudStatus) error {
 	return Retry(3, time.Second*2, func() error {
 		// @check if the status already exists
 		if _, err := client.CloudV1().CloudStatuses(status.Namespace).Get(status.Name, metav1.GetOptions{}); err != nil {
 			if kerrors.IsNotFound(err) {
-				_, err = client.CloudV1().CloudStatuses(status.Namespace).Create(&status)
+				_, err = client.CloudV1().CloudStatuses(status.Namespace).Create(status)
 			}
 			return err
 		}
-		_, err := client.CloudV1().CloudStatuses(status.Namespace).Update(&status)
+		_, err := client.CloudV1().CloudStatuses(status.Namespace).Update(status)
 
 		return err
 	})
