@@ -1,0 +1,10 @@
+---
+apiVersion: cloud.appvia.io/v1
+kind: CloudResource
+metadata:
+  name: bucket
+spec:
+  templateName: s3.bucket.v1
+  parameters:
+  - name: bucket
+    value: cloud-resources-test

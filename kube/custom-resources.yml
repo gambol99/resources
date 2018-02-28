@@ -1,0 +1,39 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: cloudresources.cloud.appvia.io
+spec:
+  group: cloud.appvia.io
+  names:
+    kind: CloudResource
+    listKind: CloudResourceList
+    plural: cloudresources
+  scope: Namespaced
+  version: v1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: cloudstatus.cloud.appvia.io
+spec:
+  group: cloud.appvia.io
+  names:
+    kind: Status
+    listKind: CloudStatusList
+    plural: cloudstatuses
+  scope: Namespaced
+  version: v1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: cloudtemplates.cloud.appvia.io
+spec:
+  group: cloud.appvia.io
+  names:
+    kind: CloudTemplate
+    listKind: CloudTemplateList
+    plural: cloudtemplates
+  scope: Cluster
+  version: v1

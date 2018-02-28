@@ -1,0 +1,20 @@
+package: github.com/gambol99/resources
+import:
+- package: github.com/aws/aws-sdk-go
+  subpackages:
+  - aws
+  - service/cloudformation
+  - service/cloudformation/cloudformationiface
+  - service/ec2
+  - service/ec2/ec2iface
+- package: github.com/urfave/cli
+- package: k8s.io/apimachinery
+  subpackages:
+  - pkg/apis/meta/v1
+- package: k8s.io/client-go
+  subpackages:
+  - kubernetes
+  - tools/cache
+  - util/workqueue
+- package: k8s.io/code-generator
+- package: github.com/kubernetes/code-generator
