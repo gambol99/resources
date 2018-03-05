@@ -116,7 +116,7 @@ func (c *controller) updateCloudStatus(ctx context.Context, stack *models.Stack,
 	if err != nil {
 		return utils.UpdateCloudStatus(c.options.ResourceClient, status)
 	}
-	status.Logs = logs
+	status.Logs = fmt.Sprintf("|\n%s", logs)
 
 	return utils.UpdateCloudStatus(c.options.ResourceClient, status)
 }
